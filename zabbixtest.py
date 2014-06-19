@@ -29,16 +29,35 @@ def listitems(itemtype):
             print output 
             
     if itemtype in 'hostgroups':
-        itemlist = zapi.template.get(output='extend')
+        itemlist = zapi.hostgroup.get(output='extend')
         for item in itemlist:
-            item_id = item['templateid']
             item_name = item['name']
+            item_id = item['groupid']
             output = item_name + "," + item_id 
             print output 
+            
+    if itemtype in 'graphs':
+        itemlist = zapi.graph.get(output='extend')
+        for item in itemlist:
+            item_name = item['name']
+            item_id = item['groupid']
+            output = item_name + "," + item_id 
+            print output 
+            
+def createhost(host_name, host_ip, port = '10050'):
+    #output = host_name + "," + host_ip + "," + group_id + "," + interfaces + "," + template_id + "," + inventory + "," + str(status) + "," + connect_to + "," + port
+    #print output
+    # interface needs to be the agents IP public IP address
+    # IP and DNS are both required even if we're only using one
+    # 
+    # if hostgroup.get
+    # and if template.get
+    groupid = 8
+    templateid = 10050
+    hostid = zapi.host.create({ 'host': host_name, 'interfaces': [{'type': 1,'main': 1,'useip': 1,'ip': host_ip,'dns': '','port': port}],'groups': [{'groupid': groupid}],'templates' : [{ 'templateid': templateid}] }) ['hostids'][0]
+    # hostid = zapi.host.create({ 'name': hostname, 'dns' : hostname,'ip' : hostip,  'port'   : port,'useip' : 0,'groups' : [{ "groupid":gid}], 'templates' : [{ "templateid":tid}]}), 'interfaces' : interfaces
 
-def createhost(hostname,hostip,groupid,interfaces,templateid,inventory,status):
-    output = hostname + "," + hostip + "," + groupid + "," + interfaces + "," + templateid + "," + inventory + "," + str(status)
-    print output
+
 
 def loginzabbix():
     try:
@@ -56,7 +75,9 @@ def loginzabbix():
 
 loginzabbix()
 
-createhost('examplehost', '192.168.1.100','Lightgroup','eth0','lighttmpl','inventory',0)
+#createhost hostname, host IP, group ID, template ID, connect_to 
+createhost('CFS-LH-10009', '192.168.1.230')
+
 
     
 #itemlist = zapi.template.get(output='extend', filter={"hostid": 10106} )

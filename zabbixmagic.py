@@ -60,7 +60,7 @@ def listitems(itemtype):
             item_error = item['error']
             host_template_id = item['templateid']
                 
-            output = item_name + "," + item_id + "," + host_template_id + "," + item_error
+            output = item_name + "," + item_id + "," + host_template_id 
             print output 
             
     if itemtype in 'templates':
@@ -72,55 +72,41 @@ def listitems(itemtype):
             print output 
             
     if itemtype in 'hostgroups':
-        itemlist = zapi.template.get(output='extend')
+        itemlist = zapi.hostgroup.get(output='extend')
         for item in itemlist:
-            item_id = item['templateid']
             item_name = item['name']
+            item_id = item['groupid']
+            output = item_name + "," + item_id
+            print output 
+
+    if itemtype in 'graphs':
+        itemlist = zapi.graph.get(output='extend')
+        for item in itemlist:
+            item_name = item['name']
+            item_id = item['groupid']
             output = item_name + "," + item_id 
+            print output 
+            
+    if itemtype in 'interfaces':
+        itemlist = zapi.graph.get(output='extend')
+        for item in itemlist:
+            item_name = item['name']
+            output = item_name 
             print output 
 
         
-def createhost(name, template):
-    patt = re.compile(r'CFS-(LH|VLH|SC|CE|PE|VE|BE)-[0-9]{5,6}') 
-    if valid_patt(patt,name):
-        name = name
+def createhost(hostname, hostip, groupid, interfaces, templateid, inventory, status, connectto, port = '10050'):
+    output = hostname + "," + hostip + "," + groupid + "," + interfaces + "," + templateid + "," + inventory + "," + str(status) + "," + connectto + "," + port
+    print output
+    # if hostgroup.get
+    # and if template.get
+    hostid = zapi.host.create({ 'name': hostname, 'dns' : hostname,'ip' : hostip,'groups': [{"groupid":groupid}] })['hostids'][0]
+    # hostid = zapi.host.create({ 'name': hostname, 'dns' : hostname,'ip' : hostip,  'port'   : port,'useip' : 0,'groups' : [{ "groupid":gid}], 'templates' : [{ "templateid":tid}]}), 'interfaces' : interfaces
     
-    patt = re.compile(r'(LH|VLH|SC|CE|PE|VE|BE)') 
-    if valid_patt(patt,name):
-        name = "CFS-%s-%s" % (name,incrementasset(name))
 
-    grouplist = listgroup('verbose')
-    if not searchlist(group, grouplist):
-        print "Please enter a valid Group"
-        sys.exit(2)
+def deletehost(hostid):
+    print hostid + " deleted"
 
-    clientip = incrementipgroup(group)
-    if not clientip:
-        print "Error: Unable to increment IP"
-        sys.exit(2)
-
-    cmd = '/usr/local/openvpn_as/scripts/sacli --user ' + name + ' --key prop_autologin --value true UserPropPut'
-    p = subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    output, err = p.communicate()
-
-    cmd = '/usr/local/openvpn_as/scripts/sacli --user ' + name + ' --key conn_group --value ' + group +' UserPropPut'
-    p = subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    output, err = p.communicate()
-    
-    cmd = '/usr/local/openvpn_as/scripts/sacli --user ' + name + ' --key pvt_password_digest --value 5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8 UserPropPut'
-    p = subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    output, err = p.communicate()
-    
-    cmd = '/usr/local/openvpn_as/scripts/sacli --user ' + name + ' --key conn_ip --value ' + clientip +' UserPropPut'
-    p = subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    output, err = p.communicate()
-    
-    return name
-
-def deletehost(name):
-    cmd = '/usr/local/openvpn_as/scripts/sacli --user ' + name + ' UserPropDelAll'
-    p = subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    output, err = p.communicate()
 
 
 def usage():
@@ -131,6 +117,8 @@ def usage():
     print "-l, --list hosts                             List hosts"
     print "-l, --list templates                         List templates" 
     print "-l, --list hostgroups                        List templates" 
+    print "-l, --list graphs                            List graphs" 
+    print "-l, --list interfaces                        List interfaces" 
     print "-c  --create host -n <name>                  Create new host"
     print "-d, --delete host -n <name>                  Delete client"
     print ""
