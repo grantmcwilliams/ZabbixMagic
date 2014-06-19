@@ -8,6 +8,7 @@ import subprocess
 import ast
 import re
 from pyzabbix import ZabbixAPI
+import ConfigParser
 
 def ip2int(ip):
     val = lambda ipstr: struct.unpack('!I', socket.inet_aton(ipstr))[0]
@@ -36,41 +37,50 @@ def valid_patt(patt,item):
         return True
     else:
         return False
-            
 
 def checkip(seqip, iplist):
     for ip in iplist:
         if ip == seqip:
             return True
- 
             
 def checknetmask(netmask):
     if netmask >= 1 and netmask <= 32:
         return True
     else:
         return False
-        
-        
-def listitems(itemtype):
-    try:
-        config = ConfigParser.ConfigParser()
-        config.read("zabbixmagic.ini")
-        ZABBIX_SERVER = config.get("zabbixserver", "server")
-        ZABBIX_USER = config.get("zabbixserver", "user")
-        ZABBIX_PASS = config.get("zabbixserver", "password")
-        zapi = ZabbixAPI(ZABBIX_SERVER)
-        zapi.login(ZABBIX_USER, ZABBIX_PASS)
-    except:
-        print "Could'n connect to zabbix. Please check if URL " + ZABBIX_SERVER + " is available"
-        exit(1)
-        
+         
+       
+def listitems(itemtype):        
     if itemtype in 'hosts':
-        hostlist = zapi.host.get(output='extend')
-        for host in hostlist:
-            print host['name']  
+        itemlist = zapi.host.get(output='extend')
+        for item in itemlist:
+            item_id = item['hostid']
+            item_name = item['name']
+            item_status = item['status']
+            item_error = item['error']
+            host_template_id = item['templateid']
+                
+            output = item_name + "," + item_id + "," + host_template_id + "," + item_error
+            print output 
+            
+    if itemtype in 'templates':
+        itemlist = zapi.template.get(output='extend')
+        for item in itemlist:
+            item_id = item['templateid']
+            item_name = item['name']
+            output = item_name + "," + item_id 
+            print output 
+            
+    if itemtype in 'hostgroups':
+        itemlist = zapi.template.get(output='extend')
+        for item in itemlist:
+            item_id = item['templateid']
+            item_name = item['name']
+            output = item_name + "," + item_id 
+            print output 
+
         
-        
-def createclient(name, group):
+def createhost(name, template):
     patt = re.compile(r'CFS-(LH|VLH|SC|CE|PE|VE|BE)-[0-9]{5,6}') 
     if valid_patt(patt,name):
         name = name
@@ -107,27 +117,10 @@ def createclient(name, group):
     
     return name
 
-def deleteclient(name):
+def deletehost(name):
     cmd = '/usr/local/openvpn_as/scripts/sacli --user ' + name + ' UserPropDelAll'
     p = subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     output, err = p.communicate()
-
-
-def outputclient(client, attribute):
-    if attribute in 'config': 
-        cmd = '/usr/local/openvpn_as/scripts/sacli --user ' + client + ' GetAutoLogin'
-        p = subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        output, err = p.communicate()
-        return output
-    elif attribute in 'ip':
-        tmpout = listclient('ips', client)
-        return '\n'.join(map(str, tmpout))
-    elif attribute in 'group':
-        tmpout = listclient('groups', client)
-        return '\n'.join(map(str, tmpout))
-    elif attribute in 'network':
-        tmpout = listclient('networks', client)
-        return '\n'.join(map(str, tmpout))
 
 
 def usage():
@@ -136,6 +129,8 @@ def usage():
     print "%s arguments:" % progname
     print "-h, --help                                   Show this help message and exit"
     print "-l, --list hosts                             List hosts"
+    print "-l, --list templates                         List templates" 
+    print "-l, --list hostgroups                        List templates" 
     print "-c  --create host -n <name>                  Create new host"
     print "-d, --delete host -n <name>                  Delete client"
     print ""
@@ -146,6 +141,21 @@ def usage():
     print "     %s --delete=host1" % progname
     print ""
 
+def loginzabbix():
+    try:
+        config = ConfigParser.ConfigParser()
+        config.read("zabbixmagic.ini")
+        ZABBIX_SERVER = config.get("zabbixserver", "server")
+        ZABBIX_USER = config.get("zabbixserver", "user")
+        ZABBIX_PASS = config.get("zabbixserver", "password")
+        global zapi
+        zapi = ZabbixAPI(ZABBIX_SERVER)
+        zapi.login(ZABBIX_USER, ZABBIX_PASS)
+    except:
+        print "Could'n connect to zabbix. Please check if URL " + ZABBIX_SERVER + " is available"
+        exit(1)
+
+
 def main():
     network = None
     platform = None
@@ -153,17 +163,7 @@ def main():
     attribute = None
     verbose = False
 
-    try:
-        config = ConfigParser.ConfigParser()
-        config.read("zabbixmagic.ini")
-        ZABBIX_SERVER = config.get("zabbixserver", "server")
-        ZABBIX_USER = config.get("zabbixserver", "user")
-        ZABBIX_PASS = config.get("zabbixserver", "password")
-        zapi = ZabbixAPI(ZABBIX_SERVER)
-        zapi.login(ZABBIX_USER, ZABBIX_PASS)
-    except:
-        print "Could'n connect to zabbix. Please check if URL " + ZABBIX_SERVER + " is available"
-        exit(1)
+    loginzabbix()
     
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "hl:c:d:", ["help","list=","create=","name=","delete="])
@@ -196,8 +196,8 @@ def main():
             sys.exit()
     
     if operation in 'list':
-        if itemtype in 'hosts':
-            listitems('hosts')
+        listitems(itemtype)
+        
 
    
 
