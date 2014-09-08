@@ -9,6 +9,7 @@ import ast
 import re
 from pyzabbix import ZabbixAPI
 import ConfigParser
+import pprint
 
 def ip2int(ip):
     val = lambda ipstr: struct.unpack('!I', socket.inet_aton(ipstr))[0]
@@ -65,7 +66,6 @@ def listitems(itemtype):
             "templateid"],
             hostids=item_id)
             
-           # templatelist = []
             templatelist[:] = []
             for tmpl in tmpllist:
                 for key1,val1 in tmpl.items():
@@ -80,9 +80,7 @@ def listitems(itemtype):
                 templates = "NA"
             output = item_name + "," + item_id + ",[" + templates + "]"
             print output 
-                
-            #output = item_name + "," + item_id + "," #+ host_template_id 
-            #print output 
+
             
     if itemtype in 'templates':
         itemlist = zapi.template.get(output='extend')
@@ -101,23 +99,44 @@ def listitems(itemtype):
             print output 
 
     if itemtype in 'graphs':
-        itemlist = zapi.graph.get(output='extend')
+        itemlist = zapi.graph.get(output='extend',)
         for item in itemlist:
+            print item
             item_name = item['name']
             item_id = item['graphid']
-            output = item_name + "," + item_id 
+            graph_type = item['graphtype']
+            template_id = item['templateid']
+            output = item_name + "," + item_id + "," + graph_type + "," + template_id
             print output 
-            
-            
             
             
     if itemtype in 'interfaces':
         itemlist = zapi.graph.get(output='extend')
         for item in itemlist:
             item_name = item['name']
-            output = item_name 
+            graph_id = item['graphid']
+            template_id = item['templateid']
+            output = item_name + "," + graph_id + "," + template_id
             print output 
 
+
+    if itemtype in 'alerts':
+        itemlist = zapi.alert.get(output='extend')
+        for item in itemlist:
+            alert_id = item['alertid']
+            action_id = item['actionid']
+            user_id = item['userid']
+            alert_clock = item['clock']
+            alert_subject = item['subject']
+            alert_message = item['message']
+            alert_status = item['status']
+            alert_retries = item['retries']
+            print item
+        
+def listdef(itemtype):  
+        output = getattr(zapi, 'do_request')(itemtype)
+        pp.pprint(output)
+        
         
 def createhost(hostname, hostip, groupid, interfaces, templateid, inventory, status, connectto, port = '10050'):
     output = hostname + "," + hostip + "," + groupid + "," + interfaces + "," + templateid + "," + inventory + "," + str(status) + "," + connectto + "," + port
@@ -143,6 +162,8 @@ def usage():
     print "-l, --list hostgroups                        List templates" 
     print "-l, --list graphs                            List graphs" 
     print "-l, --list interfaces                        List interfaces" 
+    print "-l, --list alerts                            List alerts" 
+    print "-t, --testreq <zabbix method eg. host.get    Rest request" 
     print "-c  --create host -n <name>                  Create new host"
     print "-d, --delete host -n <name>                  Delete client"
     print ""
@@ -174,11 +195,15 @@ def main():
     name = None
     attribute = None
     verbose = False
+    params = None
 
     loginzabbix()
     
+    global pp
+    pp = pprint.PrettyPrinter(indent=1)
+    
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], "hl:c:d:", ["help","list=","create=","name=","delete="])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "hl:c:d:t:p:", ["help","list=","create=","name=","delete=","testreq="])
         if not opts:
             usage()
             sys.exit(2)
@@ -194,6 +219,11 @@ def main():
         elif opt in ("-l","--list"):
             itemtype = arg
             operation = 'list'
+        elif opt in ("-t","--testreq"):
+            itemtype = arg
+            operation = 'testreq'
+        elif opt in ("-p","--params"):
+            params = arg
         elif opt in ("-c","--create"):
             itemtype = arg
             operation = 'create'
@@ -207,13 +237,15 @@ def main():
             usage()
             sys.exit()
     
+    
     if operation in 'list':
         listitems(itemtype)
         
-
-   
-
-        
+    if operation in 'testreq':
+        listdef(arg)
+     
+     
+           
 if __name__ == "__main__":
     main()
 
