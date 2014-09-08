@@ -16,8 +16,23 @@ def listitems(itemtype):
             item_status = item['status']
             item_error = item['error']
             host_template_id = item['templateid']
-                
-            output = item_name + "," + item_id + "," + host_template_id + "," + item_error
+            
+            tmpllist = zapi.host.get(
+            selectParentTemplates=[
+            "templateid"],
+            hostids=hostid)
+
+            templatelist = []
+
+            for item in itemlist:
+                for key1,val1 in item.items():
+                    if key1 == 'parentTemplates':
+                        for value in val1:
+                            if isinstance(value, dict):
+                                for key2,val2 in value.items():
+                                    templatelist.append(val2)
+            
+            output = item_name + "," + item_id + "," + host_template_id + "," + item_error + "," + str(templatelist)
             print output 
             
     if itemtype in 'templates':
@@ -52,8 +67,8 @@ def createhost(host_name, host_ip, port = '10050'):
     # 
     # if hostgroup.get
     # and if template.get
-    groupid = 8
-    templateid = 10050
+    groupid = 2
+    templateid = 10001
     hostid = zapi.host.create({ 'host': host_name, 'interfaces': [{'type': 1,'main': 1,'useip': 1,'ip': host_ip,'dns': '','port': port}],'groups': [{'groupid': groupid}],'templates' : [{ 'templateid': templateid}] }) ['hostids'][0]
     # hostid = zapi.host.create({ 'name': hostname, 'dns' : hostname,'ip' : hostip,  'port'   : port,'useip' : 0,'groups' : [{ "groupid":gid}], 'templates' : [{ "templateid":tid}]}), 'interfaces' : interfaces
 
@@ -76,7 +91,7 @@ def loginzabbix():
 loginzabbix()
 
 #createhost hostname, host IP, group ID, template ID, connect_to 
-createhost('CFS-LH-10009', '192.168.1.230')
+createhost('CFS-LH-10010', '192.168.1.231')
 
 
     

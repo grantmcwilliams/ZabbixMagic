@@ -58,10 +58,31 @@ def listitems(itemtype):
             item_name = item['name']
             item_status = item['status']
             item_error = item['error']
-            host_template_id = item['templateid']
-                
-            output = item_name + "," + item_id + "," + host_template_id 
+            templatelist = []
+            
+            tmpllist = zapi.host.get(
+            selectParentTemplates=[
+            "templateid"],
+            hostids=item_id)
+            
+           # templatelist = []
+            templatelist[:] = []
+            for tmpl in tmpllist:
+                for key1,val1 in tmpl.items():
+                    if key1 == 'parentTemplates':
+                        for value in val1:
+                            if isinstance(value, dict):
+                                for key2,val2 in value.items():
+                                    templatelist.append(val2)
+            
+            templates = ",".join(templatelist)
+            if not templates:
+                templates = "NA"
+            output = item_name + "," + item_id + ",[" + templates + "]"
             print output 
+                
+            #output = item_name + "," + item_id + "," #+ host_template_id 
+            #print output 
             
     if itemtype in 'templates':
         itemlist = zapi.template.get(output='extend')
@@ -83,9 +104,12 @@ def listitems(itemtype):
         itemlist = zapi.graph.get(output='extend')
         for item in itemlist:
             item_name = item['name']
-            item_id = item['groupid']
+            item_id = item['graphid']
             output = item_name + "," + item_id 
             print output 
+            
+            
+            
             
     if itemtype in 'interfaces':
         itemlist = zapi.graph.get(output='extend')
