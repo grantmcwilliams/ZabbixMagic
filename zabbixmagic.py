@@ -133,8 +133,8 @@ def listitems(itemtype):
             alert_retries = item['retries']
             print item
         
-def listdef(itemtype):  
-        output = getattr(zapi, 'do_request')(itemtype)
+def testreq(request):  
+        output = getattr(zapi, 'do_request')(request)
         pp.pprint(output)
         
         
@@ -220,7 +220,7 @@ def main():
             itemtype = arg
             operation = 'list'
         elif opt in ("-t","--testreq"):
-            itemtype = arg
+            request = arg
             operation = 'testreq'
         elif opt in ("-p","--params"):
             params = arg
@@ -242,7 +242,7 @@ def main():
         listitems(itemtype)
         
     if operation in 'testreq':
-        listdef(arg)
+        testreq(request)
      
      
            
