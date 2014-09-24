@@ -265,10 +265,15 @@ def createhost(host_name, host_ip, port_num, group, template):
     hostid = zapi.host.create({ 'host': host_name, 'interfaces': [{'type': 1,'main': 1,'useip': 1,'ip': host_ip,'dns': '','port': port_num}],'groups': [{'groupid': group_id}],'templates' : [{ 'templateid': template_id}] }) ['hostids'][0]
 
 
-
-def deletehost(hostid):
-    print hostid + " deleted"
-
+def deletehost(host):
+    print "deleting " + host
+    
+    if host and host.isdigit():
+        host_id = int(host)
+    else: 
+        itemlist = zapi.host.get(output='extend', filter={"host": host} )
+        for item in itemlist:
+            host_id = int(item['hostid'])
 
 
 def usage():
@@ -289,7 +294,7 @@ def usage():
     print "-c  --create host -n <name> -i <ip> "
     print "             -g <groupid|groupname>" 
     print "             -t <templateid|templatename>    Create new host with name, ip address, group id or name and template id or name"
-    print "-d, --delete host -n <name>                  Delete client"
+    print "-d, --delete host -n <hostname|hostid>       Delete host by name or id"
     print ""
     print "Examples:"
     print "Create a new host using default group and template:"
@@ -298,7 +303,9 @@ def usage():
     print "     %s --create host -n testhost -g 7 -t 10001 -i 192.168.0.100" % progname
     print "Create a new host using group and template names"
     print "     %s -c host -n testhost -g 'Hypervisors' -t 'Template OS Linux' -i 192.168.0.100" % progname
-    print "Delete a client:"
+    print "Delete a client by hostid:"
+    print "     %s --delete host -n 10107 " % progname
+    print "Delete a client by hostname:"
     print "     %s --delete host -n testhost" % progname
     print ""
 
@@ -333,9 +340,12 @@ def main():
     host_id = None
     host_ip = None
     group_id = None
-    port_num='10050'
-    group='2'
-    template='10001'
+
+    config = ConfigParser.ConfigParser()
+    config.read("zabbixmagic.ini")
+    port_num = config.get("zabbixserver", "port_num")
+    group = config.get("zabbixserver", "group")
+    template = config.get("zabbixserver", "template")
 
     loginzabbix()
     
@@ -363,9 +373,10 @@ def main():
             request = arg
             operation = 'testreq'
         elif opt in ("-c","--create"):
+            item_type = arg
             operation = 'create'
         elif opt in ("-d","--delete"):
-            host_id = arg
+            item_type = arg
             operation = 'delete'
         elif opt in ("-n","--name"):
             host_name = arg
@@ -382,21 +393,41 @@ def main():
             usage()
             sys.exit()
     
-    if operation in 'list':
-        listitems(item_type)
-        
     if operation in 'testreq':
         testreq(request)
     
+    if operation in 'list':
+        if not item_type:
+            print "Item type required"
+            return 1
+            
+        listitems(item_type)
+    
+    if operation in 'delete':
+        if not item_type:
+            print "Item type required"
+            return 1
+            
+        if not host_name:
+            print "Host name required"
+            return 1
+        
+        if item_type in host:
+            deletehost(host_name)
+    
     if operation in 'create':
+        if not item_type:
+            print "Item type required"
+            return 1
         if not host_name:
             print "Host name required"
             return 1
         if not host_ip:
             print "IP required"
             return 1
-            
-        createhost(host_name, host_ip, port_num, group, template)
+        
+        if item_type in host:    
+            createhost(host_name, host_ip, port_num, group, template)
            
            
 if __name__ == "__main__":
