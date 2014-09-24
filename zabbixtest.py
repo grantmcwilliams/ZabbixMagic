@@ -70,23 +70,19 @@ def createhost(host_name, host_ip, port='10050', group_id='2', template_id='1000
     # and group exists
     # then create
     
-    #if zapi.host.get(output='extend', filter={"host": host_name} ):
-    #    print "Host " + host_name + " already exists"
-    #    return 1
+    if zapi.host.get(output='extend', filter={"host": host_name} ):
+        print "Host " + host_name + " already exists"
+        return 1
       
-    template_id='10104' 
-    templates = zapi.template.get(output='extend', filter={"templateid": template_id} )
-    print templates
-   
-    #if zapi.template.get(output='extend', filter={"templateid": template_id} ):
-    #    print "Template " + template_id + " does not exist"
-    #    return 1
+    if not zapi.template.get(output='extend', filter={"templateids": template_id} ):
+        print "Template " + template_id + " does not exist"
+        return 1
 
-    #if not zapi.group.get(output='extend', filter={"groupid": group_id} ):
-    #    print "Group " + group_id + " does not exist"
-    #    return 1
+    if not zapi.hostgroup.get(output='extend', filter={"groupid": group_id} ):
+        print "Group " + group_id + " does not exist"
+        return 1
     
-    #hostid = zapi.host.create({ 'host': host_name, 'interfaces': [{'type': 1,'main': 1,'useip': 1,'ip': host_ip,'dns': '','port': port}],'groups': [{'groupid': group_id}],'templates' : [{ 'templateid': template_id}] }) ['hostids'][0]
+    hostid = zapi.host.create({ 'host': host_name, 'interfaces': [{'type': 1,'main': 1,'useip': 1,'ip': host_ip,'dns': '','port': port}],'groups': [{'groupid': group_id}],'templates' : [{ 'templateid': template_id}] }) ['hostids'][0]
 
 
 
