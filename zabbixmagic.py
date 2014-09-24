@@ -262,18 +262,32 @@ def createhost(host_name, host_ip, port_num, group, template):
         print "Group " + group_id + " does not exist"
         return 1
     
-    hostid = zapi.host.create({ 'host': host_name, 'interfaces': [{'type': 1,'main': 1,'useip': 1,'ip': host_ip,'dns': '','port': port_num}],'groups': [{'groupid': group_id}],'templates' : [{ 'templateid': template_id}] }) ['hostids'][0]
+    host_id = zapi.host.create({ 'host': host_name, 'interfaces': [{'type': 1,'main': 1,'useip': 1,'ip': host_ip,'dns': '','port': port_num}],'groups': [{'groupid': group_id}],'templates' : [{ 'templateid': template_id}] }) ['hostids'][0]
+    print "Host % with id %s created" % (host_name,host_id)
 
 
 def deletehost(host):
-    print "deleting " + host
+    hostlist = []
+    host_id = None
+    host_name = None
     
     if host and host.isdigit():
         host_id = int(host)
-    else: 
+        itemlist = zapi.host.get(output='extend', filter={"hostid": host} )
+        for item in itemlist:
+            host_name = item['hostid']
+    else:
+        host_name = host 
         itemlist = zapi.host.get(output='extend', filter={"host": host} )
         for item in itemlist:
             host_id = int(item['hostid'])
+    
+    if not zapi.host.get(output='extend', filter={"hostid": host_id} ):
+        print "Host " + host_name + " does not exist"
+        return 1
+    else:
+        zapi.host.delete(host_id)
+        print "Host %s with id %s deleted" % (host_name,host_id)
 
 
 def usage():
@@ -412,7 +426,7 @@ def main():
             print "Host name required"
             return 1
         
-        if item_type in host:
+        if item_type in 'host':
             deletehost(host_name)
     
     if operation in 'create':
@@ -426,7 +440,7 @@ def main():
             print "IP required"
             return 1
         
-        if item_type in host:    
+        if item_type in 'host':    
             createhost(host_name, host_ip, port_num, group, template)
            
            
