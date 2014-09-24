@@ -103,6 +103,31 @@ def listitems(itemtype):
                 print output 
         else:
             print "No " + itemtype 
+            
+    if itemtype in 'users':
+        itemlist = zapi.user.get(output='extend')
+        if itemlist:
+            for item in itemlist:
+                item_id = item['userid']
+                item_name = item['name']
+                item_surname = item['surname']
+                item_alias = item['alias']
+                output = item_name + "," + item_id + "," + item_alias + "," + item_surname  
+                print output 
+        else:
+            print "No " + itemtype     
+
+    if itemtype in 'usergroups':
+        itemlist = zapi.usergroup.get(output='extend')
+        if itemlist:
+            for item in itemlist:
+                item_id = item['usrgrpid']
+                item_name = item['name']
+                item_status = item['users_status']
+                output = item_name + "," + item_id + "," + item_status 
+                print output 
+        else:
+            print "No " + itemtype     
 
             
     if itemtype in 'templates':
@@ -266,8 +291,16 @@ def createhost(host_name, host_ip, port_num, group, template):
     print "Host % with id %s created" % (host_name,host_id)
 
 
+def createhostgroup(name)
+    if zapi.hostgroup.get(output='extend', filter={"name": name} ):
+        print "Hostgroup  already exists"
+        return 1
+    
+    hostgroup_id = zapi.hostgroup.create(name)
+    print "Hostgroup % with id %s created" % (name,hostgroup_id)
+
+
 def deletehost(host):
-    hostlist = []
     host_id = None
     host_name = None
     
@@ -289,6 +322,74 @@ def deletehost(host):
         zapi.host.delete(host_id)
         print "Host %s with id %s deleted" % (host_name,host_id)
 
+def deleteuser(user):
+    user_id = None
+    user_name = None
+    
+    if user and user.isdigit():
+        user_id = int(user)
+        itemlist = zapi.user.get(output='extend', filter={"userid": user} )
+        for item in itemlist:
+            user_name = item['name']
+    else:
+        user_name = user 
+        itemlist = zapi.user.get(output='extend', filter={"name": user} )
+        for item in itemlist:
+            user_id = int(item['userid'])
+    
+    if not zapi.user.get(output='extend', filter={"userid": user_id} ):
+        print "User " + user_name + " does not exist"
+        return 1
+    else:
+        zapi.user.delete(user_id)
+        print "User %s with id %s deleted" % (user_name,user_id)
+
+
+def deleteusergroup(group):
+    group_id = None
+    group_name = None
+    
+    if group and group.isdigit():
+        group_id = int(group)
+        itemlist = zapi.usergroup.get(output='extend', filter={"usergrpid": group} )
+        for item in itemlist:
+            group_name = item['name']
+    else:
+        group_name = group 
+        itemlist = zapi.usergroup.get(output='extend', filter={"name": group} )
+        for item in itemlist:
+            group_id = int(item['usrgrpid'])
+    
+    if not zapi.usergroup.get(output='extend', filter={"usrgrpid": group_id} ):
+        print "Usergroup " + group_name + " does not exist"
+        return 1
+    else:
+        zapi.usergroup.delete(group_id)
+        print "Usergroup %s with id %s deleted" % (group_name,group_id)
+
+
+def deletehostgroup(group):
+    group_id = None
+    group_name = None
+    
+    if group and group.isdigit():
+        group_id = int(group)
+        itemlist = zapi.hostgroup.get(output='extend', filter={"groupid": group} )
+        for item in itemlist:
+            group_name = item['name']
+    else:
+        group_name = group 
+        itemlist = zapi.hostgroup.get(output='extend', filter={"name": group} )
+        for item in itemlist:
+            group_id = int(item['groupid'])
+    
+    if not zapi.hostgroup.get(output='extend', filter={"groupid": group_id} ):
+        print "Hostgroup " + group_name + " does not exist"
+        return 1
+    else:
+        zapi.hostgroup.delete(group_id)
+        print "Hostgroup %s with id %s deleted" % (group_name,group_id)
+        
 
 def usage():
     progname =  os.path.basename(sys.argv[0])
@@ -296,6 +397,7 @@ def usage():
     print "%s arguments:" % progname
     print "-h, --help                                   Show this help message and exit"
     print "-l, --list hosts                             List host,hostid,[templates],ip address,interface type"
+    print "-l, --list users                             List user,userid"
     print "-l, --list templates                         List template name, template id" 
     print "-l, --list hostgroups                        List group name, group id"  
     print "-l, --list graphs                            List graph name, graph id, graph type, template id"
@@ -304,11 +406,18 @@ def usage():
     print "-l, --list alerts                            List alert id, action id, user id, alert clock, alert subject"
     print "                                             alert message, alert status, alert retries" 
     print "-l, --list triggers                          List trigger id, expression, description, status" 
-    print "-t, --testreq <zabbix method eg. host.get    Test request - parameters are not supported" 
     print "-c  --create host -n <name> -i <ip> "
-    print "             -g <groupid|groupname>" 
-    print "             -t <templateid|templatename>    Create new host with name, ip address, group id or name and template id or name"
+    print "         -g <groupid|groupname>" 
+    print "         -t <templateid|templatename>        Create new host with name, ip address, group id or name and template id or name"
     print "-d, --delete host -n <hostname|hostid>       Delete host by name or id"
+    print "-c  --create hostgroup -n <name>             Create new hostgroup with name"
+    print "-d, --delete host -n <hostname|hostid>       Delete host by name or id"
+    print "-d, --delete hostgroup" 
+    print           "-n <hostgroup name|hostgroup id>   Delete hostgroup by name or id"
+    print "-d, --delete user -n <username|userid>       Delete user by name or id"
+    print "-d, --delete usergroup" 
+    print           "-n <usergroup name|usergroup id>   Delete usergroup by name or id"
+    print "-t, --testreq <zabbix method eg. host.get    Test request - parameters are not supported" 
     print ""
     print "Examples:"
     print "Create a new host using default group and template:"
@@ -393,7 +502,7 @@ def main():
             item_type = arg
             operation = 'delete'
         elif opt in ("-n","--name"):
-            host_name = arg
+            name = arg
         elif opt in ("-g","--group"):
             group = arg
         elif opt in ("-p","--port"):
@@ -421,28 +530,51 @@ def main():
         if not item_type:
             print "Item type required"
             return 1
-            
-        if not host_name:
-            print "Host name required"
-            return 1
         
         if item_type in 'host':
-            deletehost(host_name)
+            if not name:
+                print "Host required"
+                return 1
+            deletehost(name)
+
+        if item_type in 'hostgroup':
+            if not name:
+                print "Host Group required"
+                return 1
+            deletehostgroup(name)
+            
+        if item_type in 'user':
+            if not name:
+                print "User name required"
+                return 1
+            deleteuser(name)    
+        
+        if item_type in 'usergroup':
+            if not name:
+                print "Group name required"
+                return 1
+            deleteusergroup(name)    
+        
     
     if operation in 'create':
         if not item_type:
             print "Item type required"
             return 1
-        if not host_name:
-            print "Host name required"
-            return 1
-        if not host_ip:
-            print "IP required"
-            return 1
         
         if item_type in 'host':    
-            createhost(host_name, host_ip, port_num, group, template)
-           
+            if not name:
+                print "Host name required"
+                return 1
+            if not host_ip:
+                print "IP required"
+                return 1
+            createhost(name, host_ip, port_num, group, template)
+        
+        if item_type in 'hostgroup':
+            if not name:
+                print "Hostgroup name required"
+                return 1
+            createhostgroup(name)
            
 if __name__ == "__main__":
     main()
