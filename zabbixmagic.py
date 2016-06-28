@@ -291,7 +291,7 @@ def createhost(host_name, host_ip, port_num, group, template):
     print "Host % with id %s created" % (host_name,host_id)
 
 
-def createhostgroup(name)
+def createhostgroup(name):
     if zapi.hostgroup.get(output='extend', filter={"name": name} ):
         print "Hostgroup  already exists"
         return 1
